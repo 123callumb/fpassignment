@@ -49,15 +49,5 @@
                       combIndexTotal (+ combIndexVal (combinations index))]
                   (recur (assoc combinations index combIndexTotal) (inc index) coinIndex))
                 (recur combinations (inc index) coinIndex)))
-            (recur (assoc combinations 0 1) (inc index) coinIndex)) 
+            (recur (assoc combinations 0 1) (inc index) coinIndex))
           (recur combinations 0 (inc coinIndex)))))))
-
-
-
-
-
-
-
-
-
-
