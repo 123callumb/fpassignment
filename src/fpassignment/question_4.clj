@@ -40,7 +40,7 @@
 ; nice to see.
 (defrecord WarmestMonthDate [date temp year])
 
-; I think this works, im not sure how to verify..... need to ask.
+; I think this works, im not sure how to verify..... need to ask. <- might redo this as a loop, leave both variations in here
 (defn find-warmest-days []
   (let [cet (get-cet)]
     ; Null check just incase, can't hurt
