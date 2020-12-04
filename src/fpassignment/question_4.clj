@@ -8,6 +8,9 @@
 ; Data structure looks like [int int int[]]
 (defrecord CetRecord [year day monthTemp])
 
+; Just a nice to have for displaying results
+(def months ["Jan" "Feb" "Mar" "Apr" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"])
+
 ; Load the cet data file into a formatted object that can be used
 ; in all of the other methods. Will return nil if something goes
 ; wrong with reading. Other functions should check for this.
@@ -37,6 +40,7 @@
 ; nice to see.
 (defrecord WarmestMonthDate [date temp year])
 
+; I think this works, im not sure how to verify..... need to ask.
 (defn find-warmest-days []
   (let [cet (get-cet)]
     ; Null check just incase, can't hurt
@@ -48,10 +52,19 @@
       ; date was the warmest.
       ; Index: is the position in the cet data set we're looking at
       (let [warmest-months (vec (repeat 12 (WarmestMonthDate. 0 -999 0)))
-            result (reduce (fn [dateRecord warmestMonths]
-                             (vec (map (fn [[monthIndex warmestVal]]
-                                         (let [currentTemp ((:monthTemp dateRecord) monthIndex)
-                                               currentWarmestTemp (:temp warmestVal)]
-                                           (if (> currentTemp currentWarmestTemp)
-                                             (WarmestMonthDate. (:day dateRecord) currentTemp (:year dateRecord))))) warmestMonths))) warmest-months cet)]
-        result))))
+            ; I've used reduce here.. well becuase I felt like it, I'd image a loop could produce
+            ; the same outcome.
+            ; They way it works is by going row by row on the CET data and looping 12 times inside
+            ; for each month, comparing the temperature of that month with the one from the warmest
+            ; months array, if the temperate of this one is higher or equal it will replace the one
+            ; from warmest months array.
+            result (reduce (fn [warmestMonths dateRecord]
+                             (vec (map-indexed (fn [monthIndex warmestVal]
+                                                 (let [currentTemp ((:monthTemp dateRecord) monthIndex)
+                                                       currentWarmestTemp (:temp warmestVal)]
+                                                   (if (>= currentTemp currentWarmestTemp)
+                                                     (WarmestMonthDate. (:day dateRecord) currentTemp (:year dateRecord))
+                                                     warmestVal)))
+                                       warmestMonths)))
+                           warmest-months cet)]
+        (map-indexed #(println (months %1) ": " %2) result)))))
