@@ -68,3 +68,74 @@
                                        warmestMonths)))
                            warmest-months cet)]
         (map-indexed #(println (months %1) ": " %2) result)))))
+
+; ==== Question 2 ====
+; Need to ask bout this one
+
+; ==== Question 3 ====
+; Mean temperature of each month and the highest and lowest temp per month
+; Record to make it more readable, total temp is all of the temps added
+; together from a given month for every year.
+; We need to see how many entires there are too as we cannot
+; divide by the total amount of cet rows as it will not account for leap
+; years. We can also track the lowesr and highest value in here too.
+(defrecord MonthTotals [totalTemp entries lowestVal highestVal])
+; This is just for the result set so it is nicely formatted
+(defrecord MonthStatResults [monthName mean lower upper])
+
+(defn montlhy-average []
+  (let [cet (get-cet)]
+    ; Catch a nil cet data just incase
+    (if (= cet nil)
+      (println "Failed to get CET data.")
+      ; Calc the size of the cet data so its not done everytime in the loop
+      (let [cetSize (count cet)]
+        ; Month totals is a vecotor with a size of 12, this is for each month, e.g. 0 index is jan
+        ; Index is 0, this will increase each loop as we're going row by row on the cet data.
+         (loop [monthTotals (vec (repeat 12 (MonthTotals. 0 0 0 0))) index 0]
+           ; If we hit the index of the size of the cet data, the loop has completed and the
+           ; function goes onto returning the stats collected.
+           (if (= index cetSize)
+             (map-indexed            ; Just to look nice I add the month name into the print log
+               (fn [index val] (let [monthName (months index)
+                                     ; The mean is calculated at the end of the loop, the total temp is
+                                     ; divided by the total amount of entires for that month.
+                                     ; There is probably above 7000 entires for each month since 1775.
+                                     ; Formatted twice into a float here so it is rounded and still a number in the
+                                     ; result set.
+                                     meanVal (Float/parseFloat (format "%.2f" (float (/ (:totalTemp val) (:entries val)))))
+                                     ; Here just grab the lowest val and highest val,
+                                     ; these values were already concluded in the loop.
+                                     lowestVal (:lowestVal val)
+                                     highestVal (:highestVal val)]
+                                 ; Place it into this record format so its nice and organised.
+                                 (MonthStatResults. monthName meanVal lowestVal highestVal))) monthTotals)
+             ; First grab the row to get its readings
+             (let [cetRow (cet index)
+                   ; This will return a new array of monthTotals that have accounted for the new cet row.
+                   ; This map runs through each month... so 12 times. Map indexed is used so we can use the
+                   ; index value to get the relevant month.
+                   newTotals (vec (map-indexed
+                                    ; monthTemp here grabs the month temperature from the cet row, the cet row has
+                                    ; an array of months stored under the :monthTemp key. So it gets the index based
+                                    ; on the current mapping index.
+                                    #(let [monthTemp ((:monthTemp cetRow) %1)]
+                                       ; Catch results the are -999, this means that there is no data for that day becuase
+                                       ; it may not be a date that exists in the given month, e.g. 31st feb would return -999.
+                                       ; In this instance the exisitng value is returned and then it moves onto the next month.
+                                       (if (= monthTemp -999)
+                                         %2
+                                         ; Total temp is the current temp total in the months total vector added onto
+                                         ; the current temperature. There is also an increase in the entries needed here
+                                         ; and checking to see if the current temp qualifies for the lowest of the month
+                                         ; or the highest.
+                                         (let [totalTemp (+ monthTemp (:totalTemp %2))
+                                               totalEntries (inc (:entries %2))
+                                               lowest (if (< monthTemp (:lowestVal %2)) monthTemp (:lowestVal %2))
+                                               highest (if (> monthTemp (:highestVal %2)) monthTemp (:highestVal %2))]
+                                           ; Returns the MonthTotals record format.
+                                           (MonthTotals. totalTemp totalEntries lowest highest))))
+                                    monthTotals))]
+               ; Once the all 12 indexes have been updated and account for the current cet row, the index is then increased
+               ; and the loop recurs for the next cet row :)
+               (recur newTotals (inc index)))))))))
