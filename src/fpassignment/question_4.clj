@@ -70,7 +70,47 @@
         (map-indexed #(println (months %1) ": " %2) result)))))
 
 ; ==== Question 2 ====
-; Need to ask bout this one
+; Find the mean of each year and then find min and max
+(defrecord YearlyMean [year mean])
+(defrecord AllYearTemps [year temps])
+(defn warmest-coldest-years []
+  (let [cet (get-cet)
+        ; Group by the year, group by seems to unorder the mapping. This shouldn't affect anything tho.
+        cetYearly (group-by :year cet)
+        ; Flatten the records into a structure of [year: int temps: int[]]))
+        ; so the year is then assoicated with a big list of temperatures for its days.
+        ; Later on this shoud be easier to run a reduce on to get the mean for the year
+        yearTemps (vec (map (fn [record] (AllYearTemps. (record 0) (vec (reduce #(concat %1 (:monthTemp %2)) [] (record 1))))) cetYearly))
+        ; Get the size outside the loop so it doenst have to be calculated each time
+        rowAmount (count yearTemps)]
+       (loop [index 0 yearlyMaxMean (YearlyMean. 0 nil) yearlyMinMean (YearlyMean. 0 nil)]
+             ; Stop recursion when it's got to the end of the list
+             (if (= index rowAmount)
+               ; Return means in a somewhat readable data structure
+               (hash-map :warmest yearlyMaxMean :coldest yearlyMinMean)
+               (let [yearTemp (yearTemps index)
+                     year (:year yearTemp)
+                     ; Filter out the -999 temps as they're not days
+                     filteredTemps (filter #(not= % -999) (:temps yearTemp))
+                     ; Add all the temps up
+                     tempTotal (reduce + filteredTemps)
+                     ; Take the temp total and divide by the total amount of numbers
+                     ; that were used in the reduce. (Need to use the filtered list here as days with -999 shouldn't be accounted for)
+                     tempMean (float (/ tempTotal (count filteredTemps)))
+                     ; Check to see if the mean is smaller than the current smallest and replace if it is. (Also replace if is nil from first loop)
+                     newLowestMean (if (or (= (:mean yearlyMinMean) nil) (> (:mean yearlyMinMean) tempMean)) (YearlyMean. year tempMean) yearlyMinMean)
+                     ; Check to see if the mean is bigger than current max mean and replace if it is. (Replace nil too)
+                     newHighestMean (if (or (= (:mean yearlyMaxMean) nil) (< (:mean yearlyMaxMean) tempMean)) (YearlyMean. year tempMean) yearlyMaxMean)]
+                 ; Recur until we get through every year
+                 (recur (inc index) newHighestMean newLowestMean))))))
+
+
+
+
+
+
+
+
 
 ; ==== Question 3 ====
 ; Mean temperature of each month and the highest and lowest temp per month
