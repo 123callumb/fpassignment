@@ -104,14 +104,6 @@
                  ; Recur until we get through every year
                  (recur (inc index) newHighestMean newLowestMean))))))
 
-
-
-
-
-
-
-
-
 ; ==== Question 3 ====
 ; Mean temperature of each month and the highest and lowest temp per month
 ; Record to make it more readable, total temp is all of the temps added
