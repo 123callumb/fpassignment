@@ -1,12 +1,23 @@
 (ns fpassignment.question-4
   (:require [clojure.java.io :as io]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clojure.spec.alpha :as spec]))
 
 ; This is so the months can be split into an array
 ; e.g. (:monthTemp 4) for may temp. Should be useful
 ; when iterating through the month calculations.
 ; Data structure looks like [int int int[]]
 (defrecord CetRecord [year day monthTemp])
+; Spec for record
+(spec/def ::year int?)
+; Make sure days are between 1 and 31
+(spec/def ::day (spec/and int? #(and (< % 31) (> % 0))))
+; Make sure that there are 12 temps, 1 for each month and they are all numbers
+(spec/def ::monthTemp (spec/and vector? #(= (count %) 12) #(every? int? %)))
+; Create record spec
+(spec/def ::CetRecordSpec (spec/keys :req [::year ::day ::monthTemp]))
+; Create spec method for checking the cet array
+(spec/def ::CetRecordArraySpec (fn [record] (every? #(spec/conform ::CetRecordSpec %) record)))
 
 ; Just a nice to have for displaying results
 (def months ["Jan" "Feb" "Mar" "Apr" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"])
@@ -15,6 +26,9 @@
 ; in all of the other methods. Will return nil if something goes
 ; wrong with reading. Other functions should check for this.
 (defn get-cet []
+  ; Run spec check on call back, this will slow down all the methods,
+  ; but it's nice to have to ensure the data structure is correct.
+  {:post [(spec/valid? ::CetRecordArraySpec %)]}
   (try (let [file (slurp (io/resource "cetdl1772on.dat"))
              ; Split line by line for each day entry
              lines (str/split file #"\n")
@@ -76,7 +90,13 @@
 ; the minimum mean and maximum mean by comparing the current years
 ; mean with the current minimum and maximum.
 (defrecord YearlyMean [year mean])
+(spec/def ::mean number?)
+(spec/def ::YearlyMeanSpec (spec/keys :req [::year] :opt [::mean]))
+
 (defrecord AllYearTemps [year temps])
+(spec/def ::temps (spec/and vector? #(every? int? %)))
+(spec/def ::AllYearTempsSpec (spec/keys :req [::year ::temps]))
+
 (defn warmest-coldest-years []
   (let [cet (get-cet)
         ; Group by the year, group by seems to unorder the mapping. This shouldn't affect anything tho.

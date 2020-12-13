@@ -1,4 +1,5 @@
-(ns fpassignment.question-1)
+(ns fpassignment.question-1
+  (:require [clojure.spec.alpha :as spec]))
 
 ; === 1. SQUARING LISTS ===
 ; EXPLANATION:
@@ -11,5 +12,16 @@
 ; function returns one by default.
 (defn square-list
   [list]
+  ; Use spec to make sure that the list passed in is a vector
+  {:pre [(spec/valid? vector? list)]}
   (map #(if (number? %) (* % %) "NaN") list))
-; This could be a trick question I feel like there should be more than this...
+
+; Using spec and expecting the list passed in to all be numbers instead of the
+; previous way where non numbers produce a NaN in the result list.
+(spec/def ::list-is-nums #(every? number? %))
+(spec/def ::is-list-of-nums (spec/and vector? ::list-is-nums))
+(defn square-list-spec-validation
+  [list]
+  {:pre [(spec/valid? ::is-list-of-nums list)]}
+  (map #(* % %) list))
+

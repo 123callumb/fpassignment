@@ -1,4 +1,5 @@
-(ns fpassignment.question-2)
+(ns fpassignment.question-2
+  (:require [clojure.spec.alpha :as spec]))
 
 ; === 2. COIN COMBINATIONS ===
 ; EXPLANATION:
@@ -9,9 +10,18 @@
 ; Collection of coins just to use for the repl
 (def us-coins [1 5 10 25 50 100])
 
-(defn calc_combinations
+; For the spec. Need to make sure that the list of coins is a vector
+; of positive integers, not any other type of number/type.
+(spec/def ::coins-are-valid (spec/and vector? #(every? (fn [coin] (and (int? coin) (> coin 0))) %)))
+
+(defn calc-coin-combinations
   ; Take target and coins so we can change the values
   [target coins]
+  {:pre [(spec/valid? ::coins-are-valid coins)
+         ; Make sure the target is also an int
+         (spec/valid? int? target)]
+   ; make sure that the final result will be an integer.
+   :post [(spec/valid? int? %)]}
   ; This is the size that the combination array will be.
   (let [combinationSize (inc target)]
     ; Combinations: Prefill the vector so we don't have to deal with any additional index not found issues.
