@@ -70,7 +70,11 @@
         (map-indexed #(println (months %1) ": " %2) result)))))
 
 ; ==== Question 2 ====
-; Find the mean of each year and then find min and max
+; This groups each cet row by the year and then puts all of the
+; temperatures from that year into one big vector and uses that
+; to calculate the mean. It will do this for each year and output
+; the minimum mean and maximum mean by comparing the current years
+; mean with the current minimum and maximum.
 (defrecord YearlyMean [year mean])
 (defrecord AllYearTemps [year temps])
 (defn warmest-coldest-years []
@@ -171,3 +175,39 @@
                ; Once the all 12 indexes have been updated and account for the current cet row, the index is then increased
                ; and the loop recurs for the next cet row :)
                (recur newTotals (inc index)))))))))
+
+; ==== Question 4 ====
+; Find the average temperature for any given day based
+; on previous years for that day.
+; Enter a string with the format dd-MM
+; e.g. the 4th of May will be; 04-05 or 4-5
+(defn avg-day-temp [date]
+  (let [dateSplit (str/split date #"-")]
+    (if (not= 2 (count dateSplit))
+      (println "Date input was incorrect, please use the format dd-MM.")
+      (let [day (Integer/parseInt (dateSplit 0))
+            month (Integer/parseInt (dateSplit 1))]
+        (if (or (or (> month 12) (< month 1)) (or (< day 1) (> day 31)))
+          (println "Please enter a valid day range (1 - 31) and a valid month range  (1 - 12)")
+          (let [cet (get-cet)]
+            (if (= cet nil)
+              (println "Issue getting cet data.")
+              (let [cetFiltered (filter #(= (:day %) day) cet)
+                    ; Grab the temperatures for every year at the chosen month
+                    ; put them in a map so we can count the entries
+                    ; Have to negate 1 from the month because months are 0 index in
+                    ; the cet data.
+                    forMonth (map #((:monthTemp %) (dec month)) cetFiltered)
+                    ; Fitler out -999 days incase we're looking at 30th of feb
+                    ; this can be used to see if a correct date was entered too!
+                    filterNonDays (filter #(not= % -999) forMonth)
+                    tempEntries (count filterNonDays)]
+                (if (= tempEntries 0)
+                  (println "Could not find any temperatures for the date given. Did you try Feburary 30th? How cheeky...")
+                  (println "The average temperature for " date " is " (float (/ (reduce + filterNonDays) tempEntries))))))))))))
+
+; === Question Ideas ===
+; These just be question ideas for now
+; ? Work out if the temperature is slowly rising is-global-warming
+; ? which day of the week is the hottest - will be dificult, will have to include date
+; ? on average hottest and coldest months, obvs july and dec
