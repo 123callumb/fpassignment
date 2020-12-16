@@ -23,8 +23,8 @@
 (def months ["Jan" "Feb" "Mar" "Apr" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"])
 
 ; Load the cet data file into a formatted object that can be used
-; in all of the other methods. Will return nil if something goes
-; wrong with reading. Other functions should check for this.
+; in all of the other methods. Will return nil/throw a spec
+; assertion error if something goes  wrong with reading.
 (defn get-cet []
   ; Run spec check on call back, this will slow down all the methods,
   ; but it's nice to have to ensure the data structure is correct.
@@ -96,6 +96,8 @@
 (defrecord AllYearTemps [year temps])
 (spec/def ::temps (spec/and vector? #(every? int? %)))
 (spec/def ::AllYearTempsSpec (spec/keys :req [::year ::temps]))
+; This for validating the structure of the year temperature record before the recursion starts within the function
+(spec/def ::ValidateAllYearTemps (spec/and vector? (fn [yearTemp] (every? #(spec/conform ::AllYearTempsSpec %) yearTemp))))
 
 (defn warmest-coldest-years []
   (let [cet (get-cet)
@@ -107,7 +109,10 @@
         yearTemps (vec (map (fn [record] (AllYearTemps. (record 0) (vec (reduce #(concat %1 (:monthTemp %2)) [] (record 1))))) cetYearly))
         ; Get the size outside the loop so it doenst have to be calculated each time
         rowAmount (count yearTemps)]
+       (spec/assert ::ValidateAllYearTemps yearTemps)
        (loop [index 0 yearlyMaxMean (YearlyMean. 0 nil) yearlyMinMean (YearlyMean. 0 nil)]
+             (spec/assert ::AllYearTempsSpec yearlyMinMean)
+             (spec/assert ::YearlyMeanSpec yearlyMaxMean)
              ; Stop recursion when it's got to the end of the list
              (if (= index rowAmount)
                ; Return means in a somewhat readable data structure
@@ -138,8 +143,16 @@
 (defrecord MonthTotals [totalTemp entries lowestVal highestVal])
 ; This is just for the result set so it is nicely formatted
 (defrecord MonthStatResults [monthName mean lower upper])
+; Expecting lower and upp to be integers as they're directly from the cet data and not manipulated in any way.
+(spec/def ::lower int?)
+(spec/def ::upper int?)
+(spec/def ::monthName (spec/and string? #(some (fn [monthName] (= monthName %)) months)))
+(spec/def ::MonthStateResultSpec (spec/keys :req-un [::monthName ::mean ::lower ::upper]))
+; Make sure that the :post result of the function is a vector of 12 months with each of their means, uppers, lowers and month name.
+(spec/def ::MonthStateResultArraySpec (spec/and vector? #(= (count %) 12) (fn [m] (every? #(spec/conform ::MonthStateResultSpec %) m))))
 
 (defn montlhy-average []
+  {:post [(spec/valid? ::MonthStateResultArraySpec %)]}
   (let [cet (get-cet)]
     ; Catch a nil cet data just incase
     (if (= cet nil)
@@ -152,20 +165,20 @@
            ; If we hit the index of the size of the cet data, the loop has completed and the
            ; function goes onto returning the stats collected.
            (if (= index cetSize)
-             (map-indexed            ; Just to look nice I add the month name into the print log
-               (fn [index val] (let [monthName (months index)
-                                     ; The mean is calculated at the end of the loop, the total temp is
-                                     ; divided by the total amount of entires for that month.
-                                     ; There is probably above 7000 entires for each month since 1775.
-                                     ; Formatted twice into a float here so it is rounded and still a number in the
-                                     ; result set.
-                                     meanVal (Float/parseFloat (format "%.2f" (float (/ (:totalTemp val) (:entries val)))))
-                                     ; Here just grab the lowest val and highest val,
-                                     ; these values were already concluded in the loop.
-                                     lowestVal (:lowestVal val)
-                                     highestVal (:highestVal val)]
-                                 ; Place it into this record format so its nice and organised.
-                                 (MonthStatResults. monthName meanVal lowestVal highestVal))) monthTotals)
+             (vec (map-indexed            ; Just to look nice I add the month name into the print log
+                    (fn [index val] (let [monthName (months index)
+                                          ; The mean is calculated at the end of the loop, the total temp is
+                                          ; divided by the total amount of entires for that month.
+                                          ; There is probably above 7000 entires for each month since 1775.
+                                          ; Formatted twice into a float here so it is rounded and still a number in the
+                                          ; result set.
+                                          meanVal (Float/parseFloat (format "%.2f" (float (/ (:totalTemp val) (:entries val)))))
+                                          ; Here just grab the lowest val and highest val,
+                                          ; these values were already concluded in the loop.
+                                          lowestVal (:lowestVal val)
+                                          highestVal (:highestVal val)]
+                                      ; Place it into this record format so its nice and organised.
+                                      (MonthStatResults. monthName meanVal lowestVal highestVal))) monthTotals))
              ; First grab the row to get its readings
              (let [cetRow (cet index)
                    ; This will return a new array of monthTotals that have accounted for the new cet row.
@@ -201,10 +214,12 @@
 ; on previous years for that day.
 ; Enter a string with the format dd-MM
 ; e.g. the 4th of May will be; 04-05 or 4-5
+(spec/def ::date (spec/and string? #(= 2 (count (str/split % #"-")))))
+
 (defn avg-day-temp [date]
+  {:pre [(spec/valid? ::date date)]
+   :post [spec/valid? number? %]}
   (let [dateSplit (str/split date #"-")]
-    (if (not= 2 (count dateSplit))
-      (println "Date input was incorrect, please use the format dd-MM.")
       (let [day (Integer/parseInt (dateSplit 0))
             month (Integer/parseInt (dateSplit 1))]
         (if (or (or (> month 12) (< month 1)) (or (< day 1) (> day 31)))
@@ -224,7 +239,9 @@
                     tempEntries (count filterNonDays)]
                 (if (= tempEntries 0)
                   (println "Could not find any temperatures for the date given. Did you try Feburary 30th? How cheeky...")
-                  (println "The average temperature for " date " is " (float (/ (reduce + filterNonDays) tempEntries))))))))))))
+                  (let [avgTemp (float (/ (reduce + filterNonDays) tempEntries))]
+                    (println "The average temperature for " date " is " avgTemp)
+                    avgTemp)))))))))
 
 ; === Question Ideas ===
 ; These just be question ideas for now
