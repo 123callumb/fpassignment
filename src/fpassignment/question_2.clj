@@ -19,7 +19,7 @@
   [target coins]
   {:pre [(spec/valid? ::coins-are-valid coins)
          ; Make sure the target is also an int
-         (spec/valid? int? target)]
+         (spec/valid? (spec/and int? #(> % 0)) target)]
    ; make sure that the final result will be an integer.
    :post [(spec/valid? int? %)]}
   ; This is the size that the combination array will be.
