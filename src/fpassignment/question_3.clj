@@ -19,7 +19,7 @@
 
 ; There is a catch in the function already for children that are not found, but this spec adds a bit of
 ; extra validation, ensuring that the child name passed into the function is part of the child array.
-(spec/def ::valid-child #(= (some (fn [childName] (= (.toLowerCase %) (.toLowerCase childName))) true) children))
+(spec/def ::valid-child #(= (some (fn [childName] (= (.toLowerCase %) (.toLowerCase childName))) children) true))
 
 ; Make sure that the seed character that is passed in exsits in the seed list, and the garden has not
 ; added any new seeds.

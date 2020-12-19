@@ -17,3 +17,17 @@
     (let [expectedResult "violets"
           param \v]
       (is (= expectedResult (find-seed param))))))
+
+(deftest childrens-plants-tests
+  (testing "Unknown child name - Throws Assertion Error"
+    (is (thrown? AssertionError (childrens-plants "Chicken Tika"))))
+  (testing "Alice's test"
+    (let [childName "alice"
+          expectedPlants ["violets" "radishes" "violets" "radishes"]
+          result (vec (childrens-plants childName))]
+      (is (= (compare result expectedPlants) 0))))
+  (testing "Harriet test"
+    (let [childName "harriet"
+          expectedPlants ["violets" "radishes" "radishes" "violets"]
+          result (vec (childrens-plants childName))]
+      (is (= (compare result expectedPlants) 0)))))
