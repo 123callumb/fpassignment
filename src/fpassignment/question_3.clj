@@ -19,7 +19,7 @@
 
 ; There is a catch in the function already for children that are not found, but this spec adds a bit of
 ; extra validation, ensuring that the child name passed into the function is part of the child array.
-(spec/def ::valid-child #(some (fn [childName] (= (.toLowerCase %) (.toLowerCase childName))) children))
+(spec/def ::valid-child #(= (some (fn [childName] (= (.toLowerCase %) (.toLowerCase childName))) true) children))
 
 ; Make sure that the seed character that is passed in exsits in the seed list, and the garden has not
 ; added any new seeds.
@@ -28,11 +28,12 @@
   {:pre [(spec/valid? char? seed)]}
   (let [seedChars (map #(.toLowerCase (subs % 0 1)) seeds)
         seedAsStr (.toLowerCase (str seed))]
-    (some #(= % seedAsStr) seedChars)))
+    ; Return a boolean instead of true or nil from the some.
+    (= (some #(= % seedAsStr) seedChars) true)))
 (spec/def ::valid-seed validate-seed)
 
 ; Function that takes a character and returns the relevant seed that
-; begins with that character. Will return null if the seed is not found.
+; begins with that character.
 (defn find-seed [character]
   {:pre [(spec/valid? ::valid-seed character)]}
   ; Lower case character and turn it into a string if it is passed in as a char (easier for predicate)
