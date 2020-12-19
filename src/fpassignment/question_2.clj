@@ -23,7 +23,9 @@
    ; make sure that the final result will be an integer.
    :post [(spec/valid? int? %)]}
   ; This is the size that the combination array will be.
-  (let [combinationSize (inc target)]
+  (let [combinationSize (inc target)
+        ; Make sure coins are distinct incase of parameter input error.
+        distinctCoins (vec (distinct coins))]
     ; Combinations: Prefill the vector so we don't have to deal with any additional index not found issues.
     ; Index: This is the current target value. This increases one by one as we go across the
     ; combination array. This will reset to 0 everytime we reach the end of the combination array.
@@ -33,7 +35,7 @@
       ; Check to see if the coin index is equal to the amount of coins. If so then we have reached the end
       ; of the coin list and the end of the function, so we can return the value at the end of the combination
       ; array.
-      (if (= coinIndex (count coins))
+      (if (= coinIndex (count distinctCoins))
         (combinations target)
         ; This is to catch when the index reaches the end of the combination array so we can reset the index
         ; and increase the coin value
@@ -44,7 +46,7 @@
           ; e.g. a coin list of 3, 4, 5 would mean we start at combination index 3 where 1 would be added, as totals of
           ; 0, 1, 2 cannot be gotten from the given coins
           (if (not= (+ index coinIndex) 0)
-            (let [coinVal (coins coinIndex)]
+            (let [coinVal (distinctCoins coinIndex)]
               ; This is to catch when the current coin value is more than the current target index. This means that the
               ; coin cannot fit into the current target so we must increase the target index by 1.
               (if (>= index coinVal)
