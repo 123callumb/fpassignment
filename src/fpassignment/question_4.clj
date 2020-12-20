@@ -15,12 +15,14 @@
 ; Make sure that there are 12 temps, 1 for each month and they are all numbers
 (spec/def ::monthTemp (spec/and vector? #(= (count %) 12) #(every? int? %)))
 ; Create record spec
-(spec/def ::CetRecordSpec (spec/keys :req [::year ::day ::monthTemp]))
+(spec/def ::CetRecordSpec (spec/keys :req-keys [::year ::day ::monthTemp]))
 ; Create spec method for checking the cet array
 (spec/def ::CetRecordArraySpec (fn [record] (every? #(spec/conform ::CetRecordSpec %) record)))
 
 ; Just a nice to have for displaying results
 (def months ["Jan" "Feb" "Mar" "Apr" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"])
+; Spec for checking to make sure it is one of these
+(spec/def ::monthName (spec/and string? (fn [m] (= true (some #(= m %) months)))))
 
 ; Load the cet data file into a formatted object that can be used
 ; in all of the other methods. Will return nil/throw a spec
@@ -48,14 +50,19 @@
 ; === Question 1 ===
 ; Warmest day for each calendar month
 ; loop through each record
-; result data struct should look somehting like:
+; result data struct should look something like:
 ; { date: int, temp: int, year: int }[12]
+; whilst looping through the data.
 ; The year isnt really needed that much here but it's
 ; nice to see.
 (defrecord WarmestMonthDate [date temp year])
+(defrecord WarmestDaysResult [monthName day temp year])
+(spec/def ::temp int?)
+(spec/def ::WarmestDaysResult (spec/keys :req-keys [::monthName ::day ::temp ::year]))
+(spec/def ::WarmestDaysResultArray (spec/and vector? #(= (count %) 12) (fn [result] (every? #(spec/conform ::WarmestDaysResult %) result))))
 
-; I think this works, im not sure how to verify..... need to ask. <- might redo this as a loop, leave both variations in here
 (defn find-warmest-days []
+  {:post [(spec/valid? ::WarmestDaysResultArray %)]}
   (let [cet (get-cet)]
     ; Null check just incase, can't hurt
     (if (= cet nil)
@@ -81,7 +88,7 @@
                                                      warmestVal)))
                                        warmestMonths)))
                            warmest-months cet)]
-        (map-indexed #(println (months %1) ": " %2) result)))))
+        (vec (map-indexed #(WarmestDaysResult. (months %1) (:date %2) (:temp %2) (:year %2)) result))))))
 
 ; ==== Question 2 ====
 ; This groups each cet row by the year and then puts all of the
@@ -90,16 +97,16 @@
 ; the minimum mean and maximum mean by comparing the current years
 ; mean with the current minimum and maximum.
 (defrecord YearlyMean [year mean])
-(spec/def ::mean number?)
-(spec/def ::YearlyMeanSpec (spec/keys :req [::year] :opt [::mean]))
-
 (defrecord AllYearTemps [year temps])
-(spec/def ::temps (spec/and vector? #(every? int? %)))
-(spec/def ::AllYearTempsSpec (spec/keys :req [::year ::temps]))
+
 ; This for validating the structure of the year temperature record before the recursion starts within the function
-(spec/def ::ValidateAllYearTemps (spec/and vector? (fn [yearTemp] (every? #(spec/conform ::AllYearTempsSpec %) yearTemp))))
+(spec/def ::mean number?)
+(spec/def ::warmest (spec/keys :req [::year ::mean]))
+(spec/def ::coldest (spec/keys :req [::year ::mean]))
+(spec/def ::ValidateWarmestColdestResult (spec/keys :req-keys [::warmest ::coldest]))
 
 (defn warmest-coldest-years []
+  {:post [(spec/valid? ::ValidateWarmestColdestResult %)]}
   (let [cet (get-cet)
         ; Group by the year, group by seems to unorder the mapping. This shouldn't affect anything tho.
         cetYearly (group-by :year cet)
@@ -109,10 +116,7 @@
         yearTemps (vec (map (fn [record] (AllYearTemps. (record 0) (vec (reduce #(concat %1 (:monthTemp %2)) [] (record 1))))) cetYearly))
         ; Get the size outside the loop so it doenst have to be calculated each time
         rowAmount (count yearTemps)]
-       (spec/assert ::ValidateAllYearTemps yearTemps)
        (loop [index 0 yearlyMaxMean (YearlyMean. 0 nil) yearlyMinMean (YearlyMean. 0 nil)]
-             (spec/assert ::AllYearTempsSpec yearlyMinMean)
-             (spec/assert ::YearlyMeanSpec yearlyMaxMean)
              ; Stop recursion when it's got to the end of the list
              (if (= index rowAmount)
                ; Return means in a somewhat readable data structure
@@ -146,7 +150,6 @@
 ; Expecting lower and upp to be integers as they're directly from the cet data and not manipulated in any way.
 (spec/def ::lower int?)
 (spec/def ::upper int?)
-(spec/def ::monthName (spec/and string? #(some (fn [monthName] (= monthName %)) months)))
 (spec/def ::MonthStateResultSpec (spec/keys :req-un [::monthName ::mean ::lower ::upper]))
 ; Make sure that the :post result of the function is a vector of 12 months with each of their means, uppers, lowers and month name.
 (spec/def ::MonthStateResultArraySpec (spec/and vector? #(= (count %) 12) (fn [m] (every? #(spec/conform ::MonthStateResultSpec %) m))))

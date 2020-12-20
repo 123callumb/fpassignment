@@ -30,4 +30,6 @@
     (let [childName "harriet"
           expectedPlants ["violets" "radishes" "radishes" "violets"]
           result (vec (childrens-plants childName))]
-      (is (= (compare result expectedPlants) 0)))))
+      (is (= (compare result expectedPlants) 0))))
+  (testing "Time test (For Fred)"
+    (time (childrens-plants "Fred"))))
