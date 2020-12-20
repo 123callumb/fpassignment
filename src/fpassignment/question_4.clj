@@ -221,15 +221,15 @@
 
 (defn avg-day-temp [date]
   {:pre [(spec/valid? ::date date)]
-   :post [spec/valid? number? %]}
+   :post [(spec/valid? number? %)]}
   (let [dateSplit (str/split date #"-")]
       (let [day (Integer/parseInt (dateSplit 0))
             month (Integer/parseInt (dateSplit 1))]
         (if (or (or (> month 12) (< month 1)) (or (< day 1) (> day 31)))
-          (println "Please enter a valid day range (1 - 31) and a valid month range  (1 - 12)")
+          (throw (IllegalArgumentException. "Please enter a valid day range (1 - 31) and a valid month range  (1 - 12)"))
           (let [cet (get-cet)]
             (if (= cet nil)
-              (println "Issue getting cet data.")
+              (throw (Exception. "Issue getting cet data."))
               (let [cetFiltered (filter #(= (:day %) day) cet)
                     ; Grab the temperatures for every year at the chosen month
                     ; put them in a map so we can count the entries
@@ -241,7 +241,7 @@
                     filterNonDays (filter #(not= % -999) forMonth)
                     tempEntries (count filterNonDays)]
                 (if (= tempEntries 0)
-                  (println "Could not find any temperatures for the date given. Did you try Feburary 30th? How cheeky...")
+                  (throw (RuntimeException. "Could not find any temperatures for the date given. Did you try Feburary 30th? How cheeky..."))
                   (let [avgTemp (float (/ (reduce + filterNonDays) tempEntries))]
                     (println "The average temperature for " date " is " avgTemp)
                     avgTemp)))))))))
