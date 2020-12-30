@@ -246,8 +246,30 @@
                     (println "The average temperature for " date " is " avgTemp)
                     avgTemp)))))))))
 
-; === Question Ideas ===
-; These just be question ideas for now
-; ? Work out if the temperature is slowly rising is-global-warming
-; ? which day of the week is the hottest - will be dificult, will have to include date
-; ? on average hottest and coldest months, obvs july and dec
+; === Question 5 ===
+; This function predicts if global warming is real in a naive way.
+; It uses multithreading to calculate the average temperature of each year.
+; Then it runs a regression analysis function on the data which returns
+; the gradient of a line. This represents a linear trend in the data that
+; indicates if the temperatures are increasing or decreasing.
+; If the value is negative then our temperatures are decreasing, if it
+; returns a positive number then the temperatures are increasing.
+; This in no way will end up representing real world global warming, but
+; I thought it may be fun function to write.
+; This can also be used to predict future temperatures in a very naive way,
+; as the regression analysis could return a equation of the line.
+(defn calc-yearly-average [cetGrouping]
+  (let [year (cetGrouping 0)
+        yearTemps (reduce (fn [totalTemps record] (concat totalTemps (filter #(not= % -999) (:monthTemp record)))) [] (cetGrouping 1))
+        yearAvg (float (/ (reduce + yearTemps) (count yearTemps)))]
+    (YearlyMean. year yearAvg)))
+
+(defn predict-global-warming-multi-threaded
+  []
+  (let [cet (get-cet)
+        groupedYears (group-by :year cet)
+        futureCalcs (vec (map #(future (calc-yearly-average %)) groupedYears))]
+    (while (not-every? #(future-done? %) futureCalcs))
+    (map #(deref %) futureCalcs))) ; @% doesn't work here for some reason?
+
+
