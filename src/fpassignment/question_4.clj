@@ -256,15 +256,13 @@
 ; returns a positive number then the temperatures are increasing.
 ; This in no way will end up representing real world global warming, but
 ; I thought it may be fun function to write.
-; This can also be used to predict future temperatures in a very naive way,
-; as the regression analysis could return a equation of the line.
 (defn calc-yearly-average [cetGrouping]
   (let [year (cetGrouping 0)
         yearTemps (reduce (fn [totalTemps record] (concat totalTemps (filter #(not= % -999) (:monthTemp record)))) [] (cetGrouping 1))
         yearAvg (float (/ (reduce + yearTemps) (count yearTemps)))]
     (YearlyMean. year yearAvg)))
 
-; This willl return a from the equation of a line y = ax+c
+; This willl return 'a' from the equation of a line y = ax+c
 ; The gradient will determine a positive or negative increase of temperature)
 ; I've added keywords for x and y properties to maek the find regression a little more
 ; generic
@@ -276,15 +274,15 @@
         yVals (map #(yKey %) xy)
         xMean (/ (reduce + xVals) rows)
         yMean (/ (reduce + yVals) rows)
-        xMinusMean (map #(- % xMean) xVals)
-        yMinusMean (map #(- % yMean) yVals)
+        xMinusMean (vec (map #(- % xMean) xVals))
+        yMinusMean (vec  (map #(- % yMean) yVals))
         xMinusMeanSqr (map #(* % %) xMinusMean)
         xyMinusMean (map-indexed #(* %2 (xMinusMean %1)) yMinusMean)
-        topTotal (reduce + xMinusMeanSqr)
-        bottomTotal (reduce + xyMinusMean)]
+        bottomTotal (reduce + xMinusMeanSqr)
+        topTotal (reduce + xyMinusMean)]
     (float (/ topTotal bottomTotal))))
 
-(defn predict-global-warming-multi-threaded
+(defn is-the-global-warming-multi-threaded
   []
   (let [cet (get-cet)
         groupedYears (group-by :year cet)
@@ -292,6 +290,9 @@
     (while (not-every? #(future-done? %) futureCalcs))
     (let [yearAvgs (map #(deref %) futureCalcs); @% instead of deref doesn't work here for some reason?
           orderedAvgs (sort-by :year yearAvgs) ; order by year so we can see the trend based on the increase of time
-          lineEquation (find-regression orderedAvgs "year" "mean")])))
+          lineGradient (find-regression-gradient orderedAvgs "year" "mean")]
+      (if (> lineGradient 0)
+        ((println "The globe is warming.. oh no.") true)
+        ((println "Hmm this doesn't seem correct, the globe isnt warming?") false)))))
 
 
