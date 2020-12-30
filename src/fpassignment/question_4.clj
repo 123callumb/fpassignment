@@ -256,12 +256,19 @@
 ; returns a positive number then the temperatures are increasing.
 ; This in no way will end up representing real world global warming, but
 ; I thought it may be fun function to write.
+
+; Calculate the average mean for a cet year grouping.
 (defn calc-yearly-average [cetGrouping]
   (let [year (cetGrouping 0)
+        ; This gets every temperature of for the year and filters out any -999 values
         yearTemps (reduce (fn [totalTemps record] (concat totalTemps (filter #(not= % -999) (:monthTemp record)))) [] (cetGrouping 1))
+        ; Divides by the amount of temps in the list above, this is important, as just dividing by 365 would not be a true average, and
+        ; also would not account for a leap year
         yearAvg (float (/ (reduce + yearTemps) (count yearTemps)))]
+    ; return the value in record format (Record was created further up the page for a previous question)
     (YearlyMean. year yearAvg)))
 
+; This calculates a regression analysis formula on a given xy dataset.
 ; This willl return 'a' from the equation of a line y = ax+c
 ; The gradient will determine a positive or negative increase of temperature)
 ; I've added keywords for x and y properties to maek the find regression a little more
@@ -282,17 +289,30 @@
         topTotal (reduce + xyMinusMean)]
     (float (/ topTotal bottomTotal))))
 
+
 (defn is-the-global-warming-multi-threaded
   []
   (let [cet (get-cet)
+        ; Group the data by the year
         groupedYears (group-by :year cet)
+        ; Using futures here seems the best as they are automatically create
+        ; a thread and run it.
         futureCalcs (vec (map #(future (calc-yearly-average %)) groupedYears))]
+    ; Wait until every future has finished and calculted a result.
     (while (not-every? #(future-done? %) futureCalcs))
+    ; Map all of the values from the futures be dereferencing it,
     (let [yearAvgs (map #(deref %) futureCalcs); @% instead of deref doesn't work here for some reason?
           orderedAvgs (sort-by :year yearAvgs) ; order by year so we can see the trend based on the increase of time
           lineGradient (find-regression-gradient orderedAvgs "year" "mean")]
-      (if (> lineGradient 0)
-        ((println "The globe is warming.. oh no.") true)
-        ((println "Hmm this doesn't seem correct, the globe isnt warming?") false)))))
+      (> lineGradient 0)))) ; less than 0 is a negative linear line and above is positive. If true - the globe is warming, oh no! :P
 
-
+; Did in single threading just to see if there is a performace gain.
+; Analysed in the unit tests.
+(defn is-the-global-warming-single-threaded
+  []
+  (let [cet (get-cet)
+        groupedYears (group-by :year cet)
+        yearAvgs (vec (map #(calc-yearly-average %) groupedYears)); @% instead of deref doesn't work here for some reason?
+        orderedAvgs (sort-by :year yearAvgs) ; order by year so we can see the trend based on the increase of time
+        lineGradient (find-regression-gradient orderedAvgs "year" "mean")]
+      (> lineGradient 0)))
