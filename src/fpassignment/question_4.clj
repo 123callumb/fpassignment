@@ -264,12 +264,11 @@
         yearAvg (float (/ (reduce + yearTemps) (count yearTemps)))]
     (YearlyMean. year yearAvg)))
 
-; This willl return a and c. In the equation of a line y = ax+c
-; This can be used to predict future points on the graph and the gradient
-; will determine a positive or negative increase of temperature
+; This willl return a from the equation of a line y = ax+c
+; The gradient will determine a positive or negative increase of temperature)
 ; I've added keywords for x and y properties to maek the find regression a little more
 ; generic
-(defn find-regression [xy xKeyword yKeyword]
+(defn find-regression-gradient [xy xKeyword yKeyword]
   (let [xKey (keyword xKeyword)
         yKey (keyword yKeyword)
         rows (count xy)
@@ -280,9 +279,10 @@
         xMinusMean (map #(- % xMean) xVals)
         yMinusMean (map #(- % yMean) yVals)
         xMinusMeanSqr (map #(* % %) xMinusMean)
-        xyMinusMean (map-indexed #(* %2 (xMinusMean %1)) yMinusMean)]))
-
-
+        xyMinusMean (map-indexed #(* %2 (xMinusMean %1)) yMinusMean)
+        topTotal (reduce + xMinusMeanSqr)
+        bottomTotal (reduce + xyMinusMean)]
+    (float (/ topTotal bottomTotal))))
 
 (defn predict-global-warming-multi-threaded
   []
