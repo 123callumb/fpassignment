@@ -258,7 +258,12 @@
 ; I thought it may be fun function to write.
 
 ; Calculate the average mean for a cet year grouping.
+(spec/def ::valid-cet-grouping (spec/and #(int? (% 0)) #(every? (fn [cetRecord] (spec/conform ::CetRecordSpec cetRecord)) %)))
+(spec/def ::valid-cet-avg-result (spec/and (spec/keys :req-keys [::year ::mean]) #(int? (:year %)) #(number? (:mean %))))
+
 (defn calc-yearly-average [cetGrouping]
+  {:pre [(spec/valid? ::valid-cet-grouping cetGrouping)]
+   :post [(spec/valid? ::valid-cet-avg-result %)]}
   (let [year (cetGrouping 0)
         ; This gets every temperature of for the year and filters out any -999 values
         yearTemps (reduce (fn [totalTemps record] (concat totalTemps (filter #(not= % -999) (:monthTemp record)))) [] (cetGrouping 1))
@@ -274,6 +279,10 @@
 ; I've added keywords for x and y properties to maek the find regression a little more
 ; generic
 (defn find-regression-gradient [xy xKeyword yKeyword]
+  {:pre [(spec/valid? string? xKeyword)
+         (spec/valid? string? yKeyword)
+         (spec/valid? #(every? (fn [xyRow] (and (contains? xyRow (keyword xKeyword)) (contains? xyRow (keyword yKeyword)))) %) xy)]
+   :post [(spec/valid? number? %)]}
   (let [xKey (keyword xKeyword)
         yKey (keyword yKeyword)
         rows (count xy)
@@ -289,9 +298,9 @@
         topTotal (reduce + xyMinusMean)]
     (float (/ topTotal bottomTotal))))
 
-
 (defn is-the-global-warming-multi-threaded
   []
+  {:post [(spec/valid? boolean? %)]}
   (let [cet (get-cet)
         ; Group the data by the year
         groupedYears (group-by :year cet)
@@ -310,6 +319,7 @@
 ; Analysed in the unit tests.
 (defn is-the-global-warming-single-threaded
   []
+  {:post [(spec/valid? boolean? %)]}
   (let [cet (get-cet)
         groupedYears (group-by :year cet)
         yearAvgs (vec (map #(calc-yearly-average %) groupedYears)); @% instead of deref doesn't work here for some reason?
